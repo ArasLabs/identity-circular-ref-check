@@ -1,0 +1,165 @@
+<AML>
+  <Item type="SQL" id="4AD0C25EA4334B5687EA3146DEEBD17B" action="add">
+    <execution_count>0</execution_count>
+    <execution_flag>immediate</execution_flag>
+    <name>SearchIdentCircularRefs</name>
+    <sqlserver_body><![CDATA[/*
+name: SearchIdentCircularRefs
+solution: 
+created: 
+purpose: Check all Identies in DB to find circular references
+notes:
+*/
+
+CREATE PROCEDURE SearchIdentCircularRefs(@loops_count INT)
+AS
+BEGIN
+  DECLARE @LOOPS_INFO TABLE(
+    loop_number INT,
+    source_id CHAR(32) COLLATE database_default,
+    related_id CHAR(32) COLLATE database_default,
+    sort_order INT);
+
+  CREATE TABLE #tmp_IDENTS(id CHAR(32) COLLATE database_default PRIMARY KEY,
+                               source_id CHAR(32) COLLATE database_default,
+                               related_id CHAR(32) COLLATE database_default);
+
+
+  INSERT INTO #tmp_IDENTS(id, source_id, related_id)
+  SELECT id, source_id, related_id
+  FROM MEMBER
+  WHERE related_id IS NOT NULL;
+
+  IF (@@ROWCOUNT > 0) /* there are Members in DB */
+  BEGIN
+    CREATE INDEX ind_tmp_IDENTS_IN_LOOP_source_id ON #tmp_IDENTS(source_id);
+    CREATE INDEX ind_tmp_IDENTS_IN_LOOP_related_id ON #tmp_IDENTS(related_id);
+  END
+
+
+  CREATE TABLE #tmp_IDENTS_IN_LOOP(id CHAR(32) COLLATE database_default PRIMARY KEY,
+                               source_id CHAR(32) COLLATE database_default,
+                               related_id CHAR(32) COLLATE database_default);
+
+
+  DECLARE @LEAF_IDENTS_COUNT INT;
+  SET @LEAF_IDENTS_COUNT = 1;
+  WHILE (@LEAF_IDENTS_COUNT>0)
+  BEGIN
+    /* delete leaf IDENTS */
+    DELETE FROM #tmp_IDENTS_IN_LOOP
+    
+    INSERT INTO #tmp_IDENTS_IN_LOOP(id, source_id, related_id)
+    SELECT * FROM #tmp_IDENTS WHERE 
+      related_id IN (SELECT source_id FROM #tmp_IDENTS) 
+        AND 
+      source_id IN (SELECT related_id FROM #tmp_IDENTS)
+
+    DELETE FROM #tmp_IDENTS
+    INSERT INTO #tmp_IDENTS SELECT * FROM #tmp_IDENTS_IN_LOOP
+    
+    SET @LEAF_IDENTS_COUNT = ((SELECT count(*) FROM #tmp_IDENTS) - (SELECT count(*) FROM #tmp_IDENTS WHERE 
+      related_id IN (SELECT source_id FROM #tmp_IDENTS) 
+       AND 
+      source_id IN (SELECT related_id FROM #tmp_IDENTS))) 
+  END
+
+
+DECLARE @CURRENT_LOOP_INFO TABLE(
+    source_id CHAR(32) COLLATE database_default,
+    related_id CHAR(32) COLLATE database_default,
+    sort_order INT);
+  
+  DECLARE @loop_number INT
+  SET @loop_number = -1
+  DECLARE @sort_order INT
+  WHILE EXISTS(SELECT TOP 1 * FROM #tmp_IDENTS_IN_LOOP)
+  BEGIN
+    DECLARE @relship AS CHAR(64);
+    SET @relship = NULL
+    DECLARE @IDENT_S AS CHAR(32);
+    DECLARE @IDENT_R AS CHAR(32);
+    
+    DELETE FROM @CURRENT_LOOP_INFO
+    SET @loop_number = @loop_number + 1
+    SET @sort_order = 0
+    
+    SELECT TOP 1 @IDENT_S=related_id
+    FROM #tmp_IDENTS_IN_LOOP
+    GROUP BY related_id
+    ORDER BY COUNT(related_id) DESC;
+    
+    SELECT TOP 1 @relship=id, @IDENT_R=related_id
+    FROM #tmp_IDENTS_IN_LOOP
+    WHERE source_id=@IDENT_S
+    
+    WHILE (NOT(@relship IS NULL))
+    BEGIN
+      SET @sort_order = @sort_order + 1
+      INSERT INTO @CURRENT_LOOP_INFO (source_id, related_id, sort_order)
+      VALUES (@IDENT_S, @IDENT_R, @sort_order)
+      
+      DELETE FROM #tmp_IDENTS_IN_LOOP WHERE id=@relship
+      
+      IF (EXISTS(SELECT * FROM #tmp_IDENTS_IN_LOOP WHERE source_id=@IDENT_R))
+      BEGIN
+        SELECT TOP 1 @relship=id, @IDENT_S=source_id, @IDENT_R=related_id
+        FROM #tmp_IDENTS_IN_LOOP
+        WHERE source_id=@IDENT_R
+      END
+      ELSE
+      BEGIN
+        SET @IDENT_S = NULL
+        SET @IDENT_R = NULL
+        SET @relship = NULL
+      END
+    END
+    
+    INSERT INTO @LOOPS_INFO(loop_number, source_id, related_id, sort_order)
+    SELECT @loop_number, source_id, related_id, sort_order FROM @CURRENT_LOOP_INFO
+
+    DELETE FROM #tmp_IDENTS
+    INSERT INTO #tmp_IDENTS SELECT * FROM #tmp_IDENTS_IN_LOOP
+
+    SET @LEAF_IDENTS_COUNT = 1;
+    WHILE (@LEAF_IDENTS_COUNT>0)
+    BEGIN
+    /* delete leaf IDENTS*/
+      DELETE FROM #tmp_IDENTS_IN_LOOP
+    
+      INSERT INTO #tmp_IDENTS_IN_LOOP(id, source_id, related_id)
+      SELECT * FROM #tmp_IDENTS WHERE 
+        related_id IN (SELECT source_id FROM #tmp_IDENTS) 
+          AND 
+        source_id IN (SELECT related_id FROM #tmp_IDENTS)
+
+      DELETE FROM #tmp_IDENTS
+      INSERT INTO #tmp_IDENTS SELECT * FROM #tmp_IDENTS_IN_LOOP
+    
+      SET @LEAF_IDENTS_COUNT = ((SELECT count(*) FROM #tmp_IDENTS) - (SELECT count(*) FROM #tmp_IDENTS WHERE 
+        related_id IN (SELECT source_id FROM #tmp_IDENTS) 
+         AND 
+        source_id IN (SELECT related_id FROM #tmp_IDENTS))) 
+    END    
+  END
+  
+finish:
+  DROP TABLE #tmp_IDENTS_IN_LOOP;
+  DROP TABLE #tmp_IDENTS;
+  
+  SELECT li.loop_number, li.sort_order,
+         li.source_id, s.keyed_name source_keyed_name, s.generation source_generation,
+         li.related_id, r.keyed_name related_keyed_name, r.generation related_generation
+  FROM @LOOPS_INFO li
+    INNER JOIN [IDENTITY] s ON li.source_id=s.id
+    INNER JOIN [IDENTITY] r ON li.related_id=r.id
+  ORDER BY li.loop_number, li.sort_order;  
+
+     
+END]]>
+</sqlserver_body>
+    <stale>0</stale>
+    <transform_first>0</transform_first>
+    <type>procedure</type>
+  </Item>
+</AML>

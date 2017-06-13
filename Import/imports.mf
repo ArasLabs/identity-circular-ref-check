@@ -1,0 +1,3 @@
+<imports>
+  <package name="IdentCircularRefCheck" path="IdentCircularRefCheck\Import" />
+</imports>
