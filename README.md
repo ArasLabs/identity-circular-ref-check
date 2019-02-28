@@ -10,12 +10,14 @@ This project and the following release notes have been migrated from the old Ara
 
 Release | Notes
 --------|--------
+[v1.0.1](https://github.com/ArasLabs/identity-circular-ref-check/releases/tag/v1.0.1) | Verified on new versions (10+, 11+)
 [v1](https://github.com/ArasLabs/identity-circular-ref-check/releases/tag/v1) | Import Package for Identity Circular Reference Check
 
 #### Supported Aras Versions
 
 Project | Aras
 --------|------
+[v1.0.1](https://github.com/ArasLabs/identity-circular-ref-check/releases/tag/v1.0.1) | 9.2.0+, 10.0+, 11.0+
 [v1](https://github.com/ArasLabs/identity-circular-ref-check/releases/tag/v1) | 9.2.0+
 
 ## Installation
