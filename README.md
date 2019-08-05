@@ -29,7 +29,7 @@ Project | Aras
 
 ### Pre-requisites
 
-1. Aras Innovator installed (version 12.0 preferred)
+1. Aras Innovator installed (see "Supported Aras Versions" above)
 2. Aras Package Import tool
 3. **IdentCircularRefCheck** import package
 
