@@ -10,6 +10,7 @@ This project and the following release notes have been migrated from the old Ara
 
 Release | Notes
 --------|--------
+[v1.0.2](https://github.com/ArasLabs/identity-circular-ref-check/releases/tag/v1.0.2) | Added Usage steps; verified on v12 
 [v1.0.1](https://github.com/ArasLabs/identity-circular-ref-check/releases/tag/v1.0.1) | Verified on new versions (10+, 11+)
 [v1](https://github.com/ArasLabs/identity-circular-ref-check/releases/tag/v1) | Import Package for Identity Circular Reference Check
 
@@ -17,6 +18,7 @@ Release | Notes
 
 Project | Aras
 --------|------
+[v1.0.2](https://github.com/ArasLabs/identity-circular-ref-check/releases/tag/v1.0.2) | 9.2.0+, 10.0+, 11.0+, 12.0+ 
 [v1.0.1](https://github.com/ArasLabs/identity-circular-ref-check/releases/tag/v1.0.1) | 9.2.0+, 10.0+, 11.0+
 [v1](https://github.com/ArasLabs/identity-circular-ref-check/releases/tag/v1) | 9.2.0+
 
@@ -27,7 +29,7 @@ Project | Aras
 
 ### Pre-requisites
 
-1. Aras Innovator installed
+1. Aras Innovator installed (see "Supported Aras Versions" above)
 2. Aras Package Import tool
 3. **IdentCircularRefCheck** import package
 
@@ -44,6 +46,15 @@ Project | Aras
 7. Select Type = **Merge** and Mode = **Thorough Mode**.
 8. Click **Import** in the top left corner.
 9. Close the Aras Package Import tool.
+
+## Usage
+
+1. Log in to Aras as admin.
+2. Navigate to **Administration > SQLs** in the table of contents (TOC).
+3. Search for the SQL item “SearchIdentCircularRefs” and open the stored procedure.
+4. Click the More […] menu and **SQL Execute**.
+   - Click **Actions > SQL Execute** in the main menu. (v11)
+5. A SOAP message will display in a new tab. If the Result tag contains a value < 1, no duplicates were found and corrected.
 
 ## Contributing
 
